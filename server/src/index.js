@@ -6,6 +6,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 
 const middlewares = require('./middlewares');
+const LogRouter = require('./routes/log.router');
 
 const app = express();
 
@@ -20,12 +21,15 @@ app.use(helmet());
 app.use(cors({
   origin: process.env.CORS_ORIGIN,
 }));
+app.use(express.json());
 
 app.get('/', (req, res) => {
   res.json({
     message: 'Hello world!',
   });
 });
+
+app.use('/api/logs', LogRouter);
 
 // 404
 app.use(middlewares.notFound);
