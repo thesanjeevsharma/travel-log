@@ -1,11 +1,14 @@
-import React from 'react';
-import ReactMapGL, { Marker, Popup } from 'react-map-gl';
+import React from 'react'
+import ReactMapGL, { Marker, Popup } from 'react-map-gl'
+import { useForm } from 'react-hook-form'
 
-import { fetchLogs } from './API'
+import { fetchLogs, createLog } from './API'
 
 const App = () => {
   const [logs, setLogs] = React.useState([])
+  const [error, setError] = React.useState('')
   const [selected, setSelected] = React.useState(null)
+  const [newLog, setNewLog] = React.useState(null)
   const [viewport, setViewport] = React.useState({
     width: '100vw',
     height: '100vh',
@@ -14,12 +17,30 @@ const App = () => {
     zoom: 8
   });
 
+  const { register, handleSubmit } = useForm()
+
   React.useEffect(() => {
     (async () => {
-      const data = await fetchLogs()
-      setLogs(data.logs)
+      const response = await fetchLogs()
+      setLogs(response.logs)
     })();
   }, [])
+
+  const addLogHandler = event => {
+    setNewLog({ latitude : event.lngLat[1], longitude : event.lngLat[0] })
+  }
+
+  const onSubmit = async (data) => {
+    try {
+      const log = { ...data, ...newLog }
+      const response = await createLog(log)
+      setLogs([...logs, response.log])
+      setError('')
+      setNewLog(null)
+    } catch(error) {
+      setError(error.message)
+    }
+  }
 
   return (
     <ReactMapGL
@@ -27,16 +48,15 @@ const App = () => {
       mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
       mapStyle="mapbox://styles/codinggraden/ckcf90duj0ckb1hp4jgqyflsb"
       onViewportChange={nextViewport => setViewport(nextViewport)}
+      onDblClick={addLogHandler}
     >
       {
         logs.map(log => (
           <>
-          <Marker latitude={log.latitude} longitude={log.longitude} offsetLeft={-20} offsetTop={-10}>
+          <Marker latitude={log.latitude} longitude={log.longitude}>
             <svg
               onClick={() => setSelected(log._id)}
-              style={{ 
-                transform : 'translate(25%, -65%)'
-               }}
+              className="marker"
               viewBox="0 0 24 24"
               width="28"
               height="28"
@@ -62,17 +82,65 @@ const App = () => {
                 onClose={() =>
                    setSelected(null)
                 }
+                className="popup"
               >
-                <div style={{ maxWidth : '300px' }}>
-                  <h1>{ log.title }</h1>
-                  <p>{ log.description }</p> 
-                  <small>Visited on: { log.date.toLocaleString() }</small>
-                </div>
+                <h1>{ log.title }</h1>
+                <p>{ log.description }</p> 
+                <small>Visited on: { log.date.toLocaleString() }</small>
               </Popup>
             )
           }
           </>
         ))
+      }
+      {
+        newLog && (
+          <>
+            <Marker latitude={newLog.latitude} longitude={newLog.longitude}>
+              <svg
+                className="marker"
+                viewBox="0 0 24 24"
+                width="28"
+                height="28"
+                stroke="#0000ff"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                >
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </Marker>
+            <Popup
+                longitude={newLog.longitude}
+                latitude={newLog.latitude}
+                closeButton={true}
+                closeOnClick={false}
+                dynamicPosition={true}
+                anchor="top"
+                onClose={() =>
+                  setNewLog(null)
+                }
+                className="popup"
+              >
+                {error && <h6>{error}</h6>}
+                <form onSubmit={handleSubmit(onSubmit)} className="entry-form">
+                  <label>Title</label>
+                  <input type="text" name="title" ref={register} required/>
+                  <label>Description</label>
+                  <textarea rows="2" name="description" ref={register}></textarea>
+                  <label>Comments</label>
+                  <textarea rows="2" name="comments" ref={register}></textarea>
+                  <label>Image</label>
+                  <input type="text" name="image" ref={register}/>
+                  <label>Date Visited</label>
+                  <input type="date" name="date" ref={register} required/>
+                  <button type="submit">Add Log</button>
+                </form>
+            </Popup>
+          </>
+        )
       }
     </ReactMapGL>
   );
