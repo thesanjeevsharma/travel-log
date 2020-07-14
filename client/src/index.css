@@ -23,6 +23,12 @@ code {
   width: 40vw;
 }
 
+.popup img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+}
+
 .entry-form label, .entry-form input, .entry-form textarea, .entry-form button {
   font-size: 1.5rem;
   margin: 0.5rem 0;
